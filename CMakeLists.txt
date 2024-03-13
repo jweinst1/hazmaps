@@ -1,6 +1,6 @@
 # Project HazMaps main cmake file
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.6)
 
 project(hazmaps VERSION 0.0.1)
 
@@ -25,3 +25,5 @@ option(WITH_testing "Allows tests to be run" ON)
 if(WITH_testing MATCHES ON)
    enable_testing()
 endif(WITH_testing MATCHES ON)
+
+add_subdirectory(tests)
