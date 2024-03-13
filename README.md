@@ -1,2 +1,2 @@
-# cmake-win-template
-Template Repo for CMake Projects on windows
+# HazMaps
+A unique combination of reference counting and hazard pointers
