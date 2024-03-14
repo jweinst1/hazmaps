@@ -11,11 +11,11 @@
 
 
 namespace HazMap {
-	struct HazardNode {
+	struct Node {
 		std::atomic<void*> ptr = nullptr;
 		std::atomic<unsigned> refcnt = 1;
 		// these are never deleted.
-		struct HazardNode* next;
+		struct Node* next;
 
 		// Only safe to use from an existing reference.
 		void incRef() {
@@ -50,6 +50,76 @@ namespace HazMap {
 			if (seen == 1) {
 				void* to_delete = ptr.exchange(nullptr);
 				return to_delete;
+			}
+			return nullptr;
+		}
+	};
+
+	struct HazardList {
+		std::atomic<Node*> hlist = nullptr;
+
+		Node* findEmptySlot(void* ptr, size_t times) {
+			for (size_t i = 0; i < times; ++i) {
+				Node* iter = hlist.load();
+				while (iter != nullptr) {
+					void* slotcheck = iter->ptr.load();
+					if (slotcheck != nullptr) {
+						continue;
+					}
+					// placement logic.
+					if (iter->ptr.compare_exchange_strong(slotcheck, ptr)) {
+						// take away at later point
+						unsigned exres = iter->refcnt.exchange(1);
+						if (exres != 0) {
+							printf("got %u in exres\n", exres);
+							assert(0);
+						}
+						return iter;
+					}
+					iter = iter->next;
+				}
+			}
+			return nullptr;
+		}
+
+		Node* add(void* ptr, bool tryToReuse = true) {
+			Node* tryToUseExisting = tryToReuse ? findEmptySlot(ptr, 2) : nullptr;
+			if (tryToUseExisting != nullptr) {
+				return tryToUseExisting;
+			}
+			Node* newnode = new Node();
+			newnode->ptr.store(ptr);
+			Node* got = hlist.load();
+			newnode->next = got;
+			while(!hlist.compare_exchange_weak(got, newnode)) {
+				newnode->next = got;
+			}
+			return newnode;
+		}
+
+		unsigned getRefCount(void* ptr) {
+			Node* iter = hlist.load();
+			while (iter != nullptr) {
+				if (iter->ptr.load() == ptr)
+					return iter->refcnt.load();
+				iter = iter->next;
+			}
+			return 0;
+		}
+
+		Node* createRef(void* ptr) {
+			Node* iter = hlist.load();
+			while (iter != nullptr) {
+				void* slotcheck = iter->ptr.load();
+				if (slotcheck == ptr) {
+					if (iter->incRefChecked()) {
+						return iter;
+					} else {
+						printf("Failed to increment!!!\n");
+						return nullptr;
+					}
+				}
+				iter = iter->next;
 			}
 			return nullptr;
 		}
