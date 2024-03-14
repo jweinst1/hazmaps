@@ -1,6 +1,6 @@
 #include <cstdio>
 
-#include "HazMapNodes.h"
+#include "HazMap.h"
 
 int main(int argc, char const *argv[])
 {

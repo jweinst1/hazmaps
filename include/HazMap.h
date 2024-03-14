@@ -1,5 +1,5 @@
-#ifndef HAZ_MAP_NODES_HEADER
-#define HAZ_MAP_NODES_HEADER
+#ifndef HAZ_MAP_HEADER
+#define HAZ_MAP_HEADER
 
 #include <atomic>
 #include <thread>
