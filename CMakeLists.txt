@@ -13,6 +13,7 @@ else(DEFINED ENV{HAZMAPS})
 	 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR})
 endif(DEFINED ENV{HAZMAPS})
 
+set(CMAKE_CXX_STANDARD 17)
 
 # Disable some windows specific warnings for using more modern c functions
 if(MSVC)
@@ -25,5 +26,7 @@ option(WITH_testing "Allows tests to be run" ON)
 if(WITH_testing MATCHES ON)
    enable_testing()
 endif(WITH_testing MATCHES ON)
+
+include_directories(${PROJECT_SOURCE_DIR}/include)
 
 add_subdirectory(tests)
