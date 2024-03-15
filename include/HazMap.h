@@ -55,7 +55,7 @@ namespace HazMap {
 		}
 	};
 
-	struct HazardList {
+	struct List {
 		std::atomic<Node*> hlist = nullptr;
 
 		Node* findEmptySlot(void* ptr, size_t times) {
@@ -115,7 +115,7 @@ namespace HazMap {
 					if (iter->incRefChecked()) {
 						return iter;
 					} else {
-						printf("Failed to increment!!!\n");
+						// existed but was deleted before we could increment
 						return nullptr;
 					}
 				}
