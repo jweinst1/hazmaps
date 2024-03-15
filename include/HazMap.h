@@ -11,11 +11,9 @@
 
 
 namespace HazMap {
-	struct Node {
+	struct Value {
 		std::atomic<void*> ptr = nullptr;
 		std::atomic<unsigned> refcnt = 1;
-		// these are never deleted.
-		struct Node* next;
 
 		// Only safe to use from an existing reference.
 		void incRef() {
@@ -55,6 +53,11 @@ namespace HazMap {
 		}
 	};
 
+	struct Node {
+		Value val;
+		struct Node* next;
+	};
+
 	struct List {
 		std::atomic<Node*> hlist = nullptr;
 
@@ -62,14 +65,14 @@ namespace HazMap {
 			for (size_t i = 0; i < times; ++i) {
 				Node* iter = hlist.load();
 				while (iter != nullptr) {
-					void* slotcheck = iter->ptr.load();
+					void* slotcheck = iter->val.ptr.load();
 					if (slotcheck != nullptr) {
 						continue;
 					}
 					// placement logic.
-					if (iter->ptr.compare_exchange_strong(slotcheck, ptr)) {
+					if (iter->val.ptr.compare_exchange_strong(slotcheck, ptr)) {
 						// take away at later point
-						unsigned exres = iter->refcnt.exchange(1);
+						unsigned exres = iter->val.refcnt.exchange(1);
 						if (exres != 0) {
 							printf("got %u in exres\n", exres);
 							assert(0);
@@ -88,7 +91,7 @@ namespace HazMap {
 				return tryToUseExisting;
 			}
 			Node* newnode = new Node();
-			newnode->ptr.store(ptr);
+			newnode->val.ptr.store(ptr);
 			Node* got = hlist.load();
 			newnode->next = got;
 			while(!hlist.compare_exchange_weak(got, newnode)) {
@@ -100,8 +103,8 @@ namespace HazMap {
 		unsigned getRefCount(void* ptr) {
 			Node* iter = hlist.load();
 			while (iter != nullptr) {
-				if (iter->ptr.load() == ptr)
-					return iter->refcnt.load();
+				if (iter->val.ptr.load() == ptr)
+					return iter->val.refcnt.load();
 				iter = iter->next;
 			}
 			return 0;
@@ -110,9 +113,9 @@ namespace HazMap {
 		Node* createRef(void* ptr) {
 			Node* iter = hlist.load();
 			while (iter != nullptr) {
-				void* slotcheck = iter->ptr.load();
+				void* slotcheck = iter->val.ptr.load();
 				if (slotcheck == ptr) {
-					if (iter->incRefChecked()) {
+					if (iter->val.incRefChecked()) {
 						return iter;
 					} else {
 						// existed but was deleted before we could increment
